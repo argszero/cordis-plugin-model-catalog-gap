@@ -1,0 +1,35 @@
+# The @argszero/cordis-plugin-model-catalog-gap bundle patch: mount and go.
+#
+# One report (#8227) describes a provider whose model list has moved past the
+# one this harness carries: the new ids are absent from every picker, and the
+# remedy the reporter reached for -- editing the catalog inside node_modules --
+# is undone by the next install.
+#
+# The two lists involved come from different places and only one of them is
+# readable offline. What a route ACCEPTS is resolved from the pinned pi-ai build
+# in node_modules; what a provider OFFERS is only knowable by asking it, and
+# nothing in a session asks. So the two can disagree for weeks without a single
+# error: a model the provider added is silently unpickable, and a model the
+# provider retired stays listed until a call happens to be made against it --
+# which then fails, on the pi-ai side, with UNKNOWN_MODEL.
+#
+# This plugin adds a tool that runs the comparison from public seams only and
+# says which side is behind:
+#
+#   - the route's own list, through the `llm` service (`listModels`) -- the same
+#     list every selector is built from and the same list the request path
+#     resolves a model id against;
+#   - the provider's list, through the same service's model-discovery seam, asked
+#     with the endpoint and WITHOUT the route name. That distinction is the whole
+#     reason the comparison is possible: a discovery request that names a route
+#     is answered from the adapter's own registry on purpose, so only a request
+#     that names none reaches the network.
+#
+# It is read-only by construction: it writes no configuration, touches no file
+# under node_modules, and calls no endpoint unless the caller names one. The
+# remedy it prints is configuration, because the real cure -- a catalog that
+# refreshes -- is an adapter change this plugin deliberately does not make.
+
+- insert:
+    - id: model-catalog-gap
+      name: '@argszero/cordis-plugin-model-catalog-gap'

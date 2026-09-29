@@ -1,0 +1,75 @@
+{
+  "name": "@argszero/cordis-plugin-model-catalog-gap",
+  "description": "Explains why a model id is unusable on a configured LLM provider route, by comparing the models this harness accepts for the route against the models the provider itself reports. The two lists come from different places and only one of them is readable offline: what a route ACCEPTS is resolved from the pinned pi-ai build inside node_modules, and what a provider OFFERS is only knowable by asking it -- and nothing in a session asks. So the two can diverge silently for weeks: a model the provider added is absent from every picker with no error anywhere, while a model the provider retired stays listed and pickable until a call is made against it. The report names which side is behind, which ids are on the wrong side, and what the consequence of each is. It is deliberately stronger than the report that asked for it (#8227): a model the provider added is not merely unpickable, it is UNUSABLE -- the pi-ai adapter resolves the id out of its installed snapshot at the top of the stream call and throws UNKNOWN_MODEL before any network I/O, so a session configured for such a model is a request that can never succeed on any endpoint, and no retry or widened timeout can change that. The structural reason is that a per-model catalog entry cannot declare its own wire protocol: a route's protocol is taken from the route's `api`, else from the installed entry for that id, else from the route's catalog when every entry in it speaks one protocol -- and a newly announced id has no installed entry, so a route-level `api` is the only other source and it outranks every other model on the route. The report therefore offers the one shape of configuration that is expressible today (add the ids to the route, when the route speaks ONE protocol; add a sibling route that declares the protocol, when it speaks SEVERAL) and says plainly that which of the two applies, and which protocol each new id speaks, is not derivable from either list -- no listing endpoint discloses it -- so the caller decides rather than the plugin guessing. The comparison runs from public seams only: the route's own list through the `llm` service's `listModels` (the same list every selector is built from and the same list the request path validates against), and the provider's list through the same service's model-discovery seam, asked with the endpoint and WITHOUT the route name -- that omission is the whole reason the comparison is possible, because a discovery request that names a route is answered from the adapter's own registry on purpose, so only a request that names none reaches the network. The endpoint is contacted only when the caller supplies a baseURL, the credential it accepts is used for that one request and never stored, and the plugin writes no configuration, touches no file under node_modules, and opens no socket of its own. It cannot make the catalog live; that is an adapter change, and this tool is what a session can say about the gap from the outside.",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/**/*.js",
+    "lib/types/**/*.d.ts",
+    "cordis.patch.yml",
+    "README.md",
+    "LICENSE"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/argszero/cordis-plugin-model-catalog-gap.git"
+  },
+  "homepage": "https://github.com/argszero/cordis-plugin-model-catalog-gap#readme",
+  "bugs": {
+    "url": "https://github.com/argszero/cordis-plugin-model-catalog-gap/issues"
+  },
+  "keywords": [
+    "cordis",
+    "deepseek-harness",
+    "dsh",
+    "plugin",
+    "llm",
+    "model-catalog",
+    "model-list",
+    "pi-ai",
+    "provider",
+    "diagnostics",
+    "tool"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.2",
+    "@deepseek-ai/dsh-llm": ">=0.1.2-rc.1 <0.2.0 || >=0.1.3-alpha.2 <0.2.0 || >=0.1.5-alpha.1 <0.2.0 || >=0.1.6-alpha.1 <0.2.0 || >=0.1.7-alpha.1 <0.2.0 || >=0.2.0-rc.1 <0.2.0",
+    "@deepseek-ai/dsh-tools": ">=0.1.2-rc.1 <0.2.0 || >=0.1.3-alpha.2 <0.2.0 || >=0.1.5-alpha.1 <0.2.0 || >=0.1.6-alpha.1 <0.2.0 || >=0.1.7-alpha.1 <0.2.0 || >=0.2.0-rc.1 <0.2.0"
+  },
+  "devDependencies": {
+    "@deepseek-ai/cordis": "^4.0.2",
+    "@deepseek-ai/dsh-llm": "0.1.7-alpha.2",
+    "@deepseek-ai/dsh-system-prompt": "0.1.7-alpha.2",
+    "@deepseek-ai/dsh-tools": "0.1.7-alpha.2",
+    "@types/node": "^24.19.0",
+    "semver": "^7.6.0",
+    "typescript": "^5.9.3"
+  },
+  "scripts": {
+    "build": "tsc",
+    "pretest": "tsc",
+    "test": "node --test \"test/*.spec.mjs\"",
+    "test:probe-lines": "node scripts/probe-lines.mjs",
+    "test:inject": "node scripts/inject-defects.mjs",
+    "prepublishOnly": "tsc"
+  },
+  "engines": {
+    "node": "^22.19 || >=24"
+  }
+}
